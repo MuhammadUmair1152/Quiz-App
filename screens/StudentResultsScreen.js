@@ -25,7 +25,17 @@ const StudentResultsScreen = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setResults(res.data.studentResults || res.data || []);
+      // Handle different response structures
+      let resultsData = [];
+      if (quizId) {
+        // Teacher viewing quiz results - response is direct array
+        resultsData = res.data || [];
+      } else {
+        // Student viewing their results - response might be nested
+        resultsData = res.data.studentResults || res.data || [];
+      }
+      
+      setResults(resultsData);
     } catch (err) {
       console.error(err);
       setError('Failed to load results');
@@ -44,18 +54,29 @@ const StudentResultsScreen = () => {
       ? item.quiz?.title || 'Quiz'
       : item.student?.fullName || item.student?.email || 'Student';
 
-    const status = item.status || (item.percentage != null ? 'completed' : 'pending');
-    const percentage = item.percentage != null ? `${item.percentage.toFixed(1)}%` : '--';
+    const percentage = item.percentage != null ? item.percentage : null;
+
+    // Determine status label
+    let statusLabel = 'Pending';
+    let statusStyle = styles.pending;
+
+    if (percentage != null) {
+      if (percentage >= 50) {
+        statusLabel = 'Passed';
+        statusStyle = styles.passed;
+      } else {
+        statusLabel = 'Failed';
+        statusStyle = styles.failed;
+      }
+    }
+
+    const percentageText = percentage != null ? `${percentage.toFixed(1)}%` : '--';
 
     return (
       <View style={styles.row}>
         <Text style={[styles.cellName]}>{primaryText}</Text>
-        <Text
-          style={[styles.cellStatus, status === 'completed' ? styles.completed : styles.pending]}
-        >
-          {status === 'completed' ? 'Done' : 'Pending'}
-        </Text>
-        <Text style={styles.cellScore}>{percentage}</Text>
+        <Text style={[styles.cellStatus, statusStyle]}>{statusLabel}</Text>
+        <Text style={styles.cellScore}>{percentageText}</Text>
       </View>
     );
   };
@@ -120,9 +141,10 @@ const styles = StyleSheet.create({
   cellName: { flex: 2 },
   cellStatus: { flex: 1, textAlign: 'center' },
   cellScore: { flex: 1, textAlign: 'right' },
-  completed: { color: Colors.success },
   pending: { color: Colors.secondary },
   headerText: { fontWeight: 'bold' },
+  passed: { color: Colors.success },
+  failed: { color: Colors.danger },
 });
 
 export default StudentResultsScreen;

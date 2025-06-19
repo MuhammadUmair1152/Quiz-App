@@ -8,7 +8,7 @@ const QuizResultScreen = ({ route }) => {
   const { result } = route.params || { result: { totalQuestions: 0, correctAnswers: 0, incorrectAnswers: 0 } };
   const { totalQuestions, correctAnswers, incorrectAnswers } = result;
   const percentage = totalQuestions ? (correctAnswers / totalQuestions) * 100 : 0;
-  const isPassed = percentage >= 70; // Example passing threshold
+  const isPassed = percentage >= 50; // Example passing threshold
   const navigation = useNavigation();
 
   return (

@@ -72,15 +72,32 @@ const QuizAttemptScreen = () => {
   };
 
   const handleSubmitQuiz = async () => {
-    const studentAnswers = selectedAnswers;
+    // Convert selected option indices to their corresponding answer texts for local calculation
+    const studentAnswerTexts = selectedAnswers.map((selectedIdx, qIdx) =>
+      selectedIdx != null ? quiz.questions[qIdx].options[selectedIdx] : null
+    );
 
-    // Compute results locally because backend currently returns only a message
+    // Compute results locally in a tolerant way (correctAnswer may be text or index)
     let correctAnswers = 0;
     quiz.questions.forEach((q, idx) => {
-      if (studentAnswers[idx] === q.correctAnswer) {
-        correctAnswers += 1;
+      const chosenAnswerIdx = selectedAnswers[idx];
+      const chosenAnswerText = studentAnswerTexts[idx];
+
+      let isCorrect = false;
+
+      // Case 1: correctAnswer stored as index
+      if (typeof q.correctAnswer === 'number') {
+        isCorrect = chosenAnswerIdx === q.correctAnswer;
       }
+
+      // Case 2: correctAnswer stored as string/text
+      if (!isCorrect && typeof q.correctAnswer === 'string' && chosenAnswerText != null) {
+        isCorrect = chosenAnswerText.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase();
+      }
+
+      if (isCorrect) correctAnswers += 1;
     });
+
     const totalQuestions = quiz.questions.length;
     const incorrectAnswers = totalQuestions - correctAnswers;
 
@@ -88,9 +105,12 @@ const QuizAttemptScreen = () => {
 
     try {
       const token = await AsyncStorage.getItem('token');
+      // Send the indices as studentAnswers (backend expects indices)
       await axios.post(
         `${API_URL}/api/quizzes/${quizId}/submit`,
-        { studentAnswers },
+        {
+          studentAnswers: selectedAnswers, // Send indices as expected by backend
+        },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
